@@ -72,39 +72,9 @@ public class BeansFactory {
                         argObjects[i] = createBean(refBeanDefinition);
                     }
                 }
-                Constructor finalContructor = null;
-                if (!refClassMap.isEmpty()) {
-                    for (Constructor candidateConstructor : candidateConstructors) {
-                        Class[] parameterTypes = candidateConstructor.getParameterTypes();
-                        boolean match = false;
-                        for (Map.Entry<Integer, Class> entry : refClassMap.entrySet()) {
-                            int index = entry.getKey();
-                            Class refClass = entry.getValue();
-                            if (parameterTypes[index] != null && parameterTypes[index].getCanonicalName().equals(refClass.getCanonicalName())) {
-                                match = true;
-                            } else {
-                                match = false;
-                                break;
-                            }
-                        }
-                        if (match) {
-                            finalContructor = candidateConstructor;
-                            break;
-                        }
-                    }
-                    if (finalContructor == null) {
-                        throw new BeanCreationFailureException("Not found constructor for parameter types declared");
-                    }
-                } else {
-                    finalContructor = candidateConstructors.get(0);
-                }
-                Class[] parameterTypes = finalContructor.getParameterTypes();
-                Object[] parameterValues = new Object[parameterTypes.length];
-                for (int i=0; i<parameterTypes.length; i++) {
-                    Class parameterType = parameterTypes[i];
-                    Object argObject = argObjects[i];
-                    parameterValues[i] = cast(argObject, parameterType);
-                }
+                Constructor finalConstructor = getMatchConstructor(candidateConstructors, refClassMap);
+                Class[] parameterTypes = finalConstructor.getParameterTypes();
+                Object[] parameterValues = getParameterValues(argObjects, parameterTypes);
                 bean = beanClass.getConstructor(parameterTypes).newInstance(parameterValues);
             }
         } catch (ClassNotFoundException | IllegalAccessException
@@ -117,6 +87,46 @@ public class BeansFactory {
             return singletonObjects.get(beanDefinition.getId());
         }
         return bean;
+    }
+
+    private Object[] getParameterValues(Object[] argObjects, Class[] parameterTypes) {
+        Object[] parameterValues = new Object[parameterTypes.length];
+        for (int i=0; i<parameterTypes.length; i++) {
+            Class parameterType = parameterTypes[i];
+            Object argObject = argObjects[i];
+            parameterValues[i] = cast(argObject, parameterType);
+        }
+        return parameterValues;
+    }
+
+    private Constructor getMatchConstructor(List<Constructor> candidateConstructors, Map<Integer, Class> refClassMap) {
+        Constructor finalContructor = null;
+        if (!refClassMap.isEmpty()) {
+            for (Constructor candidateConstructor : candidateConstructors) {
+                Class[] parameterTypes = candidateConstructor.getParameterTypes();
+                boolean match = false;
+                for (Map.Entry<Integer, Class> entry : refClassMap.entrySet()) {
+                    int index = entry.getKey();
+                    Class refClass = entry.getValue();
+                    if (parameterTypes[index] != null && parameterTypes[index].getCanonicalName().equals(refClass.getCanonicalName())) {
+                        match = true;
+                    } else {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    finalContructor = candidateConstructor;
+                    break;
+                }
+            }
+            if (finalContructor == null) {
+                throw new BeanCreationFailureException("Not found constructor for parameter types declared");
+            }
+        } else {
+            finalContructor = candidateConstructors.get(0);
+        }
+        return finalContructor;
     }
 
     private Object cast(Object argObject, Class parameterType) {
