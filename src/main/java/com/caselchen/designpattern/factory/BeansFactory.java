@@ -1,8 +1,9 @@
 package com.caselchen.designpattern.factory;
 
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BeansFactory {
@@ -39,27 +40,72 @@ public class BeansFactory {
         Object bean = null;
         try {
             Class beanClass = Class.forName(beanDefinition.getClassName());
+            Constructor[] constructors = beanClass.getConstructors();
             List<BeanDefinition.ConstructorArg> args = beanDefinition.getConstructorArgs();
+            args.sort(Comparator.comparingInt(BeanDefinition.ConstructorArg::getIndex));
+
+            List<Constructor> candidateConstructors = new ArrayList<>();
+            for (Constructor constructor : constructors) {
+                if (constructor.getParameterCount() == args.size()) {
+                    candidateConstructors.add(constructor);
+                }
+            }
+
             if (args.isEmpty()) {
                 bean = beanClass.newInstance();
             } else {
-                Class[] argClasses = new Class[args.size()];
+                int[] argIndexes = new int[args.size()];
                 Object[] argObjects = new Object[args.size()];
+                Map<Integer, Class> refClassMap = new HashMap<Integer, Class>();
                 for (int i = 0; i < args.size(); ++i) {
                     BeanDefinition.ConstructorArg arg = args.get(i);
                     if (!arg.getIsRef()) {
-                        argClasses[i] = arg.getType();
+                        argIndexes[i] = arg.getIndex();
                         argObjects[i] = arg.getArg();
                     } else {
                         BeanDefinition refBeanDefinition = beanDefinitions.get(arg.getArg());
                         if (refBeanDefinition == null) {
                             throw new NoSuchBeanDefinitionException("Bean is not defined: " + arg.getArg());
                         }
-                        argClasses[i] = Class.forName(refBeanDefinition.getClassName());
+                        Class refClass = Class.forName(refBeanDefinition.getClassName());
+                        refClassMap.put(i, refClass);
                         argObjects[i] = createBean(refBeanDefinition);
                     }
                 }
-                bean = beanClass.getConstructor(argClasses).newInstance(argObjects);
+                Constructor finalContructor = null;
+                if (!refClassMap.isEmpty()) {
+                    for (Constructor candidateConstructor : candidateConstructors) {
+                        Class[] parameterTypes = candidateConstructor.getParameterTypes();
+                        boolean match = false;
+                        for (Map.Entry<Integer, Class> entry : refClassMap.entrySet()) {
+                            int index = entry.getKey();
+                            Class refClass = entry.getValue();
+                            if (parameterTypes[index] != null && parameterTypes[index].getCanonicalName().equals(refClass.getCanonicalName())) {
+                                match = true;
+                            } else {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) {
+                            finalContructor = candidateConstructor;
+                            break;
+                        }
+                    }
+                    if (finalContructor == null) {
+                        throw new BeanCreationFailureException("Not found constructor for parameter types declared");
+                    }
+                } else {
+                    finalContructor = candidateConstructors.get(0);
+                }
+                Class[] parameterTypes = finalContructor.getParameterTypes();
+                Object[] parameterValues = new Object[parameterTypes.length];
+                for (int i=0; i<parameterTypes.length; i++) {
+                    Class parameterType = parameterTypes[i];
+                    Object argObject = argObjects[i];
+                    parameterValues[i] = cast(argObject, parameterType);
+                }
+                bean = beanClass.getConstructor(parameterTypes).newInstance(parameterValues);
             }
         } catch (ClassNotFoundException | IllegalAccessException
                 | InstantiationException | NoSuchMethodException | InvocationTargetException e) {
@@ -71,5 +117,23 @@ public class BeansFactory {
             return singletonObjects.get(beanDefinition.getId());
         }
         return bean;
+    }
+
+    private Object cast(Object argObject, Class parameterType) {
+        Object result = null;
+        if (parameterType.equals(Integer.class)) {
+            result = Integer.valueOf(String.valueOf(argObject));
+        } else if (parameterType.equals(Boolean.class)) {
+            result = Boolean.valueOf(String.valueOf(argObject));
+        } else if (parameterType.equals(Double.class)) {
+            result = Double.valueOf(String.valueOf(argObject));
+        } else if (parameterType.equals(Float.class)) {
+            result = Float.valueOf(String.valueOf(argObject));
+        } else if (parameterType.equals(Long.class)) {
+            result = Long.valueOf(String.valueOf(argObject));
+        } else if (parameterType.equals(String.class)) {
+            result = String.valueOf(argObject);
+        }
+        return result;
     }
 }

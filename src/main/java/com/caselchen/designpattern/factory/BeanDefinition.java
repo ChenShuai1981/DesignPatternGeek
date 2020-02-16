@@ -63,7 +63,7 @@ public class BeanDefinition {
 
     public static class ConstructorArg {
         private boolean isRef;
-        private Class type;
+        private int index;
         private Object arg;
 
         public boolean getIsRef() {
@@ -74,12 +74,12 @@ public class BeanDefinition {
             this.isRef = isRef;
         }
 
-        public Class getType() {
-            return type;
+        public int getIndex() {
+            return index;
         }
 
-        public void setType(Class type) {
-            this.type = type;
+        public void setIndex(int index) {
+            this.index = index;
         }
 
         public Object getArg() {

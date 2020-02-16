@@ -60,13 +60,11 @@ public class BeanDefinitionHandler extends DefaultHandler {
 
         if ("constructor-arg".equals(tag)) {
             constructorArg = new BeanDefinition.ConstructorArg();
-            String typeName = attributes.getValue("type");
-            if (typeName != null && !typeName.isEmpty()) {
-                constructorArg.setType(typeMap.get(typeName));
-            }
+            int index = Integer.valueOf(attributes.getValue("index"));
+            constructorArg.setIndex(index);
             Object arg = attributes.getValue("value");
             if (arg != null) {
-                constructorArg.setArg(typeName.equals("int") ? Integer.valueOf(String.valueOf(arg)) : arg);
+                constructorArg.setArg(arg);
             }
             String ref = attributes.getValue("ref");
             if (ref != null && !ref.isEmpty()) {
