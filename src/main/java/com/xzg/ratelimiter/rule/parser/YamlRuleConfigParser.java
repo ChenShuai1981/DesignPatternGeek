@@ -1,0 +1,40 @@
+package com.xzg.ratelimiter.rule.parser;
+
+import com.xzg.ratelimiter.rule.RuleConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+public class YamlRuleConfigParser implements RuleConfigParser {
+    private static final Logger log = LoggerFactory.getLogger(YamlRuleConfigParser.class);
+
+    @Override
+    public RuleConfig parse(String configText) {
+        return null;
+    }
+
+    @Override
+    public RuleConfig parse(InputStream in) {
+        RuleConfig ruleConfig = null;
+        try {
+            if (in != null) {
+                Yaml yaml = new Yaml();
+                ruleConfig = yaml.loadAs(in, RuleConfig.class);
+            }
+        } catch (Exception e) {
+            log.error("error!!", e);
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    log.error("close file error:{}", e);
+                }
+            }
+        }
+        return ruleConfig;
+    }
+}
