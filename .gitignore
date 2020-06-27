@@ -1,0 +1,16 @@
+/log
+/notification-admin/src/main/webapp/WEB-INF/views/sms/newSms/addOrUpdateChannel.jsp
+.project
+.classpath
+.springBeans
+*.bak
+*.lock
+*.class
+*.bak
+*.lock
+*.iml
+
+.settings
+target/
+disconf/
+.idea/
